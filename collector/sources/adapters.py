@@ -608,19 +608,11 @@ def _text(s: str) -> str:
     return _html.unescape(_clean(re.sub(r"<[^>]+>", " ", s or "")))
 
 
-_JV_ROW = re.compile(r'<td class="jv-job-list-name">\s*<a href="(/[^"]+/job/[^"]+)">(.*?)</a>'
-                     r'\s*</td>\s*(?:<td class="jv-job-list-location">(.*?)</td>)?', re.S)
-
-
 def jobvite(token: str, company: str = "") -> list[dict]:
-    out, seen = [], set()
-    for path, title, where in _JV_ROW.findall(_page(f"https://jobs.jobvite.com/{token}/jobs")):
-        url = "https://jobs.jobvite.com" + path
-        if url not in seen:
-            seen.add(url)
-            out.append(_blank(url=url, title=_text(title), company=company or token,
-                              location=_text(where), detail=url, ats="jobvite", token=token))
-    return out
+    from collector.sources.jobvite_list import collect
+    return [_blank(url=r["url"], title=_clean(r["title"]), company=company or token,
+                   location=_clean(r["location"]), detail=r["url"], ats="jobvite", token=token)
+            for r in collect(token, _page)]
 
 
 # Two portal layouts: job cards (the link wraps a <div class="job-title">) and an accordion list
