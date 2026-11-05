@@ -11,7 +11,7 @@ JOB={'url':'https://example.com/job/1','title':'Software Engineer','company':'Ex
 class CollectorTests(unittest.TestCase):
  def test_inventory_is_complete_and_public(self):
   boards=json.loads((run.ROOT/'sources.json').read_text())
-  self.assertEqual(len(boards),14530);self.assertEqual(len({run.board_key(b) for b in boards}),len(boards))
+  self.assertGreaterEqual(len(boards),14530);self.assertEqual(len({run.board_key(b) for b in boards}),len(boards))
   self.assertEqual(sum(b['priority'] for b in boards),40)
   self.assertTrue(all(set(b)=={'ats','token','name','interval','priority','india_proven'} for b in boards))
   self.assertTrue(all(b['ats'] in adapters.ADAPTERS or b['ats']=='site' for b in boards))

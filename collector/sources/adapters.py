@@ -478,9 +478,9 @@ def zoho(token: str, company: str = "") -> list[dict]:
         return []
     out = []
     for j in data if isinstance(data, list) else []:
-        # Publish=false with Keep_on_Career_Site=true is still listed on the careers page.
-        if not isinstance(j, dict) or not j.get("id") or (
-                j.get("Publish") is False and not j.get("Keep_on_Career_Site")):
+        # A filled role can remain visible with Keep_on_Career_Site=true. Visibility is
+        # not an open vacancy: the publisher's explicit Publish=false takes precedence.
+        if not isinstance(j, dict) or not j.get("id") or j.get("Publish") is False:
             continue
         title = _clean(j.get("Posting_Title") or j.get("Job_Opening_Name"))
         slug = re.sub(r"[^A-Za-z0-9]+", "-", title).strip("-") or "job"
