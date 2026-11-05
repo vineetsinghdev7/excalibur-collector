@@ -27,7 +27,7 @@ def db():
             c.commit();_init=True
     return c
 
-def request(url,body=None,timeout=12,retries=1):
+def request(url,body=None,timeout=12,retries=1,*,accept=None):
     if not public_url(url) or time.monotonic()>=DEADLINE:return 0,url,b''
     host=urllib.parse.urlsplit(url).netloc
     with _lock:
@@ -36,10 +36,11 @@ def request(url,body=None,timeout=12,retries=1):
     if at>=DEADLINE:return 0,url,b''
     time.sleep(max(0,at-time.monotonic()))
     encoded=None if body is None else json.dumps(body,separators=(',',':')).encode()
-    key=hashlib.sha256(url.encode()+(encoded or b'')).hexdigest();cached=None
+    variant=('\nAccept:'+accept).encode() if accept else b''
+    key=hashlib.sha256(url.encode()+(encoded or b'')+variant).hexdigest();cached=None
     if body is None:
         with db() as c:cached=c.execute('SELECT etag,modified,body FROM responses WHERE k=?',(key,)).fetchone()
-    headers={'User-Agent':UA,'Accept':'application/json,text/html,application/xml,*/*'}
+    headers={'User-Agent':UA,'Accept':accept or 'application/json,text/html,application/xml,*/*'}
     if encoded is not None:headers['Content-Type']='application/json'
     if cached:
         if cached[0]:headers['If-None-Match']=cached[0]
@@ -68,7 +69,7 @@ def request(url,body=None,timeout=12,retries=1):
         time.sleep(min(1, max(0,DEADLINE-time.monotonic())))
     return 0,url,b''
 
-def get_bytes(url,timeout=12,retries=1):return request(url,timeout=timeout,retries=retries)[2]
+def get_bytes(url,timeout=12,retries=1,*,accept=None):return request(url,timeout=timeout,retries=retries,accept=accept)[2]
 def get_json(url,timeout=12,retries=1):
     try:return json.loads(get_bytes(url,timeout,retries))
     except (ValueError,UnicodeError):return None
