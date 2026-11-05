@@ -1,0 +1,11 @@
+.cache/
+__pycache__/
+*.pyc
+.env*
+*.local.*
+*.db
+*.sqlite*
+*.log
+*.apk
+*.pem
+*.key

@@ -1,0 +1,69 @@
+name: Scheduled task
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validation only
+        type: boolean
+        default: false
+  schedule:
+    - cron: '2-59/5 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-task
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -v
+  collect:
+    if: github.event_name != 'push' && (vars.COLLECTOR_ENABLED == 'true' || inputs.dry_run)
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .cache
+          key: public-source-cache-v1-${{ github.run_id }}
+          restore-keys: public-source-cache-v1-
+      - name: Run
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          COLLECTOR_KEY: ${{ secrets.COLLECTOR_KEY }}
+          MATCHING_RULES: ${{ secrets.MATCHING_RULES }}
+          JOB_TIMEZONE: Asia/Kolkata
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        shell: bash
+        run: |
+          if [ "$DRY_RUN" = 'true' ]; then
+            python -m collector.run --dry-run --limit 40 --seconds 100
+          else
+            python -m collector.run
+          fi
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        if: always()
+        with:
+          path: .cache
+          key: public-source-cache-v1-${{ github.run_id }}
