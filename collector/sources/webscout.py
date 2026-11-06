@@ -97,7 +97,7 @@ ATS_PATTERNS: tuple[tuple[str, str], ...] = (
     ("bamboohr", r"([A-Za-z0-9_-]+)\.bamboohr\.com/(?:careers|jobs)"),
     ("jazzhr", r"([A-Za-z0-9_-]+)\.applytojob\.com"),
     ("jobvite", r"jobs\.jobvite\.com/(?:careers/)?([A-Za-z0-9_-]+)"),
-    ("rippling", r"ats\.rippling\.com/([A-Za-z0-9_-]+)"),
+    ("rippling", r"ats\.rippling\.com/(?:[a-z]{2}-(?:[a-z]{2}|\d{3})/)?([A-Za-z0-9_-]+)"),
     ("pinpoint", r"([A-Za-z0-9_-]+)\.pinpointhq\.com"),
     ("keka", r"([A-Za-z0-9_-]+)\.keka\.com/careers"),
     # Zoho runs regional domains, so the token is the whole careers host.
