@@ -24,6 +24,20 @@ class CollectorTests(unittest.TestCase):
  def test_public_url_rejects_credentials_and_private_addresses(self):
   for value in ['file:///etc/passwd','http://127.0.0.1/','http://localhost/','http://169.254.169.254/','https://user:password@example.com/','http://[broken']:
    self.assertFalse(net.public_url(value))
+ def test_shorter_interval_takes_effect_without_overriding_failure_backoff(self):
+  upgraded={**BOARD,'priority':False,'interval':1800}
+  state={'boards':{run.board_key(upgraded):[NOW+80000,0]},'seen':{}}
+  self.assertEqual(run.choose([upgraded],state,NOW,1),[upgraded])
+  state['boards'][run.board_key(upgraded)]=[NOW+80000,2]
+  self.assertEqual(run.choose([upgraded],state,NOW,1),[])
+  state['boards'][run.board_key(upgraded)]=[NOW+1700,0]
+  self.assertEqual(run.choose([upgraded],state,NOW,1),[])
+ def test_overseas_route_requires_positive_posting_evidence(self):
+  overseas={**JOB,'location':'Tokyo, Japan','description':JOB['description']+' Visa sponsorship is available.'}
+  normalized=run.normalize(overseas,BOARD,{},NOW)
+  self.assertEqual(normalized['location'],'Tokyo, Japan')
+  self.assertEqual(normalized['posted_at'],'')
+  self.assertIsNone(run.normalize({**overseas,'description':overseas['description']+' US citizens only.'},BOARD,{},NOW))
  def test_unknown_date_never_becomes_discovery_time(self):
   j=run.normalize(JOB,BOARD,{},NOW)
   self.assertEqual(j['posted_at'],'');self.assertEqual(j['posted_field'],'')

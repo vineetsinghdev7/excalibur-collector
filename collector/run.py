@@ -1,10 +1,10 @@
-"""Bounded Indian software-job collection, independent of the private Excalibur app."""
+"""Bounded software-job collection for applicants based in India."""
 import argparse, concurrent.futures, copy, hashlib, json, math, os, time
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from collector.relay import Relay, pack, unpack
-from collector.sources import adapters, date_verification, enrich, indiafeeds, net, posting_dates, regions, scorer, sites, webscout
+from collector.sources import adapters, date_verification, enrich, indiafeeds, net, posting_dates, regions, scorer, sites, webscout, eligibility
 
 ROOT=Path(__file__).resolve().parents[1]
 FIELDS='title source company location score posted_at posted_field posted_checked_at posted_conflict posted_comparison added_at description salary_min salary_max salary_cur salary_period yoe sponsor edu tech emp_type department last_seen'.split()
@@ -20,7 +20,12 @@ def fingerprint(job):
 def board_key(board):return identifier(board['ats']+':'+board['token'])
 
 def choose(boards,state,now,limit):
-    due=[b for b in boards if state['boards'].get(board_key(b),[0])[0]<=now]
+    def is_due(board):
+        checkpoint=state['boards'].get(board_key(board),[0,0])
+        # A newly shortened interval must not inherit a healthy board's old daily
+        # deadline. Retain failure backoff; do not hammer unavailable publishers.
+        return checkpoint[0]<=now or (not checkpoint[1] and checkpoint[0]>now+board['interval'])
+    due=[b for b in boards if is_due(b)]
     due.sort(key=lambda b:(not b['priority'],not b['india_proven'],state['boards'].get(board_key(b),[0])[0],board_key(b)))
     return due[:limit]
 
@@ -29,7 +34,7 @@ def normalize(job,board,profile,now):
     job=copy.deepcopy(job)
     for k,v in job.items():
         if isinstance(v,str):job[k]=v.replace('\x00','\ufffd').encode('utf-8','replace').decode()
-    if not net.public_url(job.get('url','')) or not indiafeeds.india_eligible(job.get('location','')):return None
+    if not net.public_url(job.get('url','')) or not eligibility.evidence(job):return None
     if job.get('description'):enrich.enrich(job)
     score,_=scorer.score(job,profile)
     if score<=0:return None
@@ -95,11 +100,16 @@ def main(argv=None):
         key=board_key(board);previous=state['boards'].get(key,[0,0]);failures=0 if ok else min(8,previous[1]+1)
         interval=board['interval'] if ok else min(86400,max(300,board['interval']//4)*2**failures)
         if reason=='browser_required':interval=86400
-        complete=True;details=0
+        complete=True
+        # Keep the four-detail budget, prioritizing India while also checking overseas
+        # software postings whose visa/relocation terms are only on the detail page.
+        needs=[raw for raw in rows if not raw.get('description') and raw.get('detail') and scorer.is_software_title(raw.get('title',''))]
+        needs.sort(key=lambda raw:not indiafeeds.india_eligible(raw.get('location','')))
+        for raw in needs[:4]:
+            if time.monotonic()>net.DEADLINE:break
+            raw['description']=adapters.fetch_detail(raw)
         for raw in rows:
             if time.monotonic()>net.DEADLINE+60:complete=False;break
-            if not raw.get('description') and raw.get('detail') and details<4 and indiafeeds.india_eligible(raw.get('location','')) and scorer.title_plausible(raw.get('title',''),profile):
-                raw['description']=adapters.fetch_detail(raw);details+=1
             job=normalize(raw,board,profile,now)
             if not job:continue
             stats['matched']+=1;identity=identifier(job['url']);old=state['seen'].get(identity)
