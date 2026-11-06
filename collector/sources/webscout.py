@@ -104,6 +104,7 @@ ATS_PATTERNS: tuple[tuple[str, str], ...] = (
     ("zoho", r"([A-Za-z0-9_-]+\.zohorecruit\.(?:com\.au|com|in|eu|jp))"),
     ("freshteam", r"([A-Za-z0-9_-]+)\.freshteam\.com"),
     ("manatal", r"careers-page\.com/([A-Za-z0-9_-]+)"),
+    ("manatal", r"\b((?!www\.)[A-Za-z0-9_-]+\.careers-page\.com)\b"),
     # platforms with no adapter yet — recorded, not polled, so the gap stays measurable
     ("icims", r"careers-([A-Za-z0-9_-]+)\.icims\.com"),
     # Eightfold hosts most of its customers on ONE shared domain (app.eightfold.ai) and identifies
@@ -152,15 +153,21 @@ class Polite:
                 else:rp.parse(['User-agent: *','Disallow: /'])
                 self._robots[host]=rp
             return self._robots[host].can_fetch(UA,url)
+    def crawl_delay(self,host):
+        rp=self._robots.get(host)
+        return max(2,(rp.crawl_delay(UA) or 0) if rp else 0)
+    def _wait(self,host,delay=2):
+        from collector.sources import net
+        with self._lock:
+            at=max(time.monotonic(),self._last.get(host,0)+delay);self._last[host]=at
+        if at>=net.DEADLINE:return False
+        time.sleep(max(0,at-time.monotonic()))
+        return True
     def get(self,url,limit=FETCH_CAP):
         from collector.sources import net
         host=urllib.parse.urlsplit(url).netloc
         if time.monotonic()>=net.DEADLINE or not net.public_url(url) or not self.allowed(url):return -1,url,''
-        with self._lock:
-            delay=max(2,self._robots[host].crawl_delay(UA) or 0)
-            at=max(time.monotonic(),self._last.get(host,0)+delay);self._last[host]=at
-        if at>=net.DEADLINE:return 0,url,''
-        time.sleep(max(0,at-time.monotonic()))
+        if not self._wait(host,self.crawl_delay(host)):return 0,url,''
         code,final,body=net.request(url,retries=0)
         return code,final,body[:limit].decode('utf-8','replace')
 

@@ -70,6 +70,8 @@ _NOT_SOFTWARE = re.compile("(?i)\\b(?:" + "|".join([
     "antenna", "photonics", "mechatronics", "controls", "biomedical", "chemist", "physicist",
     "technician", "machinist", "welder", "fabrication", "facilities", "hvac", "electronics",
     "power", "battery", "vehicle", "flight", "propellant", "launch", "spacecraft",
+    r"(?:cnc|cam|cmm|plc|mastercam)[\s/-]*(?:programmer|programming|operator)",
+    r"(?:programmer|programming)[\s/-]+(?:cnc|cam|cmm|plc|mastercam)",
 ]) + r")\b")
 
 # Customer-facing "engineers" — the job is the customer, not the codebase.

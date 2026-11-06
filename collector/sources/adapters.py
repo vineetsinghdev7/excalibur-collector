@@ -565,7 +565,29 @@ def pinpoint(token: str, company: str = "") -> list[dict]:
 
 # ---- Manatal ----------------------------------------------------------------
 # Public career-page API, paginated, descriptions inline.
+_MANATAL_POLITE = None
+
+
+def _manatal_page(url: str) -> str:
+    global _MANATAL_POLITE
+    if _MANATAL_POLITE is None:
+        from collector.sources import webscout
+        _MANATAL_POLITE = webscout.Polite()
+    if not _MANATAL_POLITE.allowed(url):
+        return ""
+    from urllib.parse import urlsplit
+    host = urlsplit(url).netloc
+    _MANATAL_POLITE._wait(host, _MANATAL_POLITE.crawl_delay(host))
+    # Keep the transport's body cache/conditional GET while obeying the site's pacing.
+    return _page(url)
+
+
 def manatal(token: str, company: str = "") -> list[dict]:
+    if token.endswith(".careers-page.com"):
+        from collector.sources.manatal_list import collect
+        return [_blank(url=j["url"], title=_clean(j["title"]), company=company or token,
+                       location=_clean(j["location"]), description=_clean(j["description"]),
+                       detail=j["url"], ats="manatal", token=token) for j in collect(token, _manatal_page)]
     url, out = f"https://api.manatal.com/open/v3/career-page/{token}/jobs/", []
     for _ in range(20):                                # 20 pages is far past any real board
         data = _get_json(url)
@@ -670,7 +692,7 @@ ADAPTERS = {"greenhouse": greenhouse, "lever": lever, "ashby": ashby,
 DETAIL = {"smartrecruiters": _detail_smartrecruiters, "workday": _detail_workday,
           "bamboohr": _detail_bamboohr, "rippling": _detail_rippling,
           "jobvite": _detail_jsonld, "freshteam": _detail_jsonld, "jazzhr": _detail_jsonld,
-          "indiafeed": indiafeeds.detail}
+          "indiafeed": indiafeeds.detail, "manatal": _detail_jsonld}
 
 
 def fetch(ats: str, token: str, company: str = "") -> list[dict]:
