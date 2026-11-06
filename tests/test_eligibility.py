@@ -85,6 +85,15 @@ class EligibilityTests(unittest.TestCase):
         self.assertIsNone(self.check("Tokyo", "Relocation assistance."))
         self.assertIsNone(self.check("Tokyo", "No international relocation assistance."))
 
+    def test_combined_visa_and_relocation_offer(self):
+        offer = "Visa sponsorship and relocation support will be provided."
+        self.assertEqual(self.check("Tokyo, Japan", offer)["basis"], "visa_sponsorship")
+        self.assertIsNone(self.check("Tokyo", "Visa sponsorship and relocation support will not be provided."))
+        self.assertIsNone(self.check("Tokyo", "Will visa sponsorship and relocation support be provided?"))
+        self.assertIsNone(self.check("Tokyo", offer + " Candidates must hold a valid work permit."))
+        self.assertIsNone(self.check("Tokyo", offer + " We do not hire candidates from India."))
+        self.assertIsNone(self.check("Tokyo", offer + " We cannot provide visa sponsorship for this position."))
+
     def test_negative_visa_blocks_relocation(self):
         self.assertIsNone(self.check("Berlin", "International relocation support. No visa sponsorship."))
 

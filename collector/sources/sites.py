@@ -72,6 +72,8 @@ def _polite() -> webscout.Polite:
 def _text(v) -> str:
     if isinstance(v, dict):
         v = v.get("name") or v.get("value") or ""
+    if isinstance(v, list):
+        return ", ".join(filter(None, (_text(item) for item in v)))
     return html.unescape(str(v or "")).strip()          # "Lead &#8211; Data" → "Lead – Data"
 
 
@@ -157,7 +159,7 @@ def _location_hint(link_text: str, text: str) -> str:
     """Where a plain job page's job is: a place named in its link's text ("…·San Francisco"),
     else the Indian cities its opening lines name. Empty when it doesn't say."""
     for part in _PARTS.split(link_text or "")[1:]:
-        part = re.sub(r"(?i)\s*apply\s*(?:now)?\s*[→>»]*\s*$", "", part).strip()
+        part = re.sub(r"(?i)\s*(?:apply\s*(?:now)?|view\s+(?:role|job|details))\s*[→>»]*\s*$", "", part).strip()
         if part and (re.search(r"(?i)\bremote\b", part) or regions.first(part) != "Other"):
             return part[:120]
     cities = regions.india_cities(text[:4000])

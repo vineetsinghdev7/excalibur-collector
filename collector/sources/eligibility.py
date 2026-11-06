@@ -56,7 +56,7 @@ _VISA = re.compile(
     r'|\b(?:we|company)\s+(?:(?:can|will|do|may|are able to)\s+)?sponsor\s+(?:(?:your|a|the|work|employment)\s+)*visas?\b'
     r'|\b(?:visa|work permit)\s+(?:and relocation\s+)?(?:support|assistance)\s+(?:is\s+)?(?:available|provided|offered)\b'
     r'|\b(?:offer|offers|provide|provides)\s+(?:(?:full|relocation and)\s+)?(?:visa|work permit)\s+(?:support|assistance)\b'
-    r'|\bvisa sponsorship and (?:overseas |international )?relocation support (?:is )?available\b'
+    r'|\bvisa sponsorship and (?:overseas |international )?relocation support (?:(?:is|will be) )?(?:available|provided|offered)\b'
     r'|\brelocation support,? (?:including|and) visa sponsorship(?: where applicable)?\b', re.I)
 # Do not accidentally join unrelated list items into an offer such as
 # "customer support [newline] visa sponsorship required?".
