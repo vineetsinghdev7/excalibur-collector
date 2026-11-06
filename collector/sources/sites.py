@@ -97,9 +97,15 @@ def _job_from_posting(p: dict, url: str, company: str, token: str) -> dict:
     org = _text(p.get("hiringOrganization"))
     emp = p.get("employmentType") or ""
     expiry = instant(p.get("validThrough"))
+    posted = str(p.get("datePosted") or "")
+    # Polymer labels its timestamp explicitly as UTC. Canonical ISO keeps that exact instant
+    # usable by both Python and the existing mobile parser; never infer a missing timezone.
+    utc = re.fullmatch(r"(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2}(?:\.\d+)?) UTC", posted)
+    if utc:
+        posted = f"{utc[1]}T{utc[2]}Z"
     return {"url": url, "title": _text(p.get("title"))[:200], "company": company or org,
             "location": _location(p), "department": "",
-            "posted_at": str(p.get("datePosted") or ""), "posted_field": "JobPosting.datePosted",
+            "posted_at": posted, "posted_field": "JobPosting.datePosted",
             "description": enrich.to_text(str(p.get("description") or "")),
             "emp_hint": ", ".join(emp) if isinstance(emp, list) else str(emp),
             # An unspecified timezone cannot establish an exact closing instant.
