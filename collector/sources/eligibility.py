@@ -89,8 +89,13 @@ def evidence(job):
     # Requirements must not be overridden by a generic global benefits paragraph.
     restrictions = list(_RESTRICTION.finditer(text))
     for match in restrictions:
-        clause = re.split(r'[\n.;]', text[match.start():match.end()+70])[0]
-        if re.search(r'\b(?:based|located|reside|work)\s+in\s+India\b', clause, re.I): continue
+        requirement = match.group()
+        citizenship_or_clearance = re.search(r'citizen|permanent residen|clearance|TS/SCI|\b(?:US|U\.S\.|EU|UK|Canada|Australia|Europe)[ -]+only\b', requirement, re.I)
+        local_residence = re.search(r'\b(?:based|located|reside)\s+in\s+India\b', requirement, re.I)
+        local_work_right = re.search(r'\b(?:right|authorization|authorisation|permission) to work in India\b', requirement, re.I)
+        if requirement.lower().endswith('to work') and re.match(r'\s+in India\b', text[match.end():], re.I): local_work_right = True
+        work_condition = re.search(r'work permit|work visa|to work|authori[sz]', requirement, re.I)
+        if not citizenship_or_clearance and (local_work_right or (local_residence and not work_condition)): continue
         # A current residence OR willingness to relocate is not a local-only bar.
         if re.search(r'\bor willing to relocate\b', match.group(), re.I) and not re.search(r'citizen|work permit|authori[sz]|clearance', match.group(), re.I): continue
         return None

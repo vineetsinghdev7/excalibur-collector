@@ -28,6 +28,10 @@ class EligibilityTests(unittest.TestCase):
         self.assertIsNone(self.check("Worldwide", "We do not hire candidates from India."))
         self.assertIsNone(self.check("Worldwide", "India is not supported."))
         self.assertIsNone(self.check("Worldwide", "You must be based in Europe. We also have offices in India."))
+        self.assertIsNone(self.check("India", "You must be a US citizen and based in India."))
+        self.assertIsNone(self.check("India", "You must be based in India; US only."))
+        self.assertIsNone(self.check("India", "You must be based in India and hold a valid work permit in the UK."))
+        self.assertIsNone(self.check("Worldwide", "You must already have the right to work in the UK, while based in India."))
 
     def test_explicit_visa_offers(self):
         for description in ("We offer visa sponsorship.", "Visa sponsorship is available.",
