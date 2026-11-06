@@ -333,6 +333,36 @@ def breezy(token: str, company: str = "") -> list[dict]:
 
 # ---- Teamtailor -------------------------------------------------------------
 # JSON Feed (jsonfeed.org): items[] with content_html inline. No key, no auth.
+def _teamtailor_location(posting: dict) -> str:
+    """Read publisher location metadata; prose and company names are not eligibility."""
+    def label(value):
+        if isinstance(value, dict):
+            value = value.get("name") or ""
+        return _clean(value) if isinstance(value, str) else ""
+
+    def country(value):
+        value = label(value)
+        return "India" if value.upper() == "IN" else value
+
+    locations = posting.get("jobLocation") or []
+    places = []
+    for place in locations if isinstance(locations, list) else [locations]:
+        address = place.get("address") if isinstance(place, dict) else None
+        if isinstance(address, dict):
+            parts = [label(address.get("addressLocality")), label(address.get("addressRegion")), country(address.get("addressCountry"))]
+            places.append(", ".join(dict.fromkeys(p for p in parts if p)))
+        elif isinstance(address, str):
+            places.append(_clean(address))
+    if posting.get("jobLocationType") == "TELECOMMUTE":
+        requirements = posting.get("applicantLocationRequirements") or []
+        names = [country(r) for r in (requirements if isinstance(requirements, list) else [requirements])]
+        where = ", ".join(dict.fromkeys(n for n in names if n))
+        if where:
+            return f"Remote ({where})"  # Eligibility takes precedence over office addresses.
+        places.insert(0, "Remote")
+    return "; ".join(dict.fromkeys(p for p in places if p))
+
+
 def teamtailor(token: str, company: str = "") -> list[dict]:
     data = _get_json(f"https://{token}.teamtailor.com/jobs.json")
     if not isinstance(data, dict):
@@ -340,11 +370,15 @@ def teamtailor(token: str, company: str = "") -> list[dict]:
     name = _clean(data.get("title"))
     out = []
     for j in (data.get("items") or []):
+        if not isinstance(j, dict):
+            continue
+        posting = j.get("_jobposting")
+        posting = posting if isinstance(posting, dict) else {}
         out.append(_blank(
             url=j.get("url", ""),
             title=_clean(j.get("title")),
             company=company or name or token,
-            location="",                               # not in the feed; parsed from desc by enrich
+            location=_teamtailor_location(posting),
             posted_at=j.get("date_published", ""), posted_field="teamtailor.date_published",
             description=enrich.to_text(j.get("content_html") or j.get("content_text") or ""),
             ats="teamtailor", token=token))

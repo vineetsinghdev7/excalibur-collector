@@ -77,6 +77,7 @@ _NOT_SOFTWARE = re.compile("(?i)\\b(?:" + "|".join([
 # Customer-facing "engineers" — the job is the customer, not the codebase.
 _CUSTOMER_FACING = re.compile("(?i)(?:" + "|".join([
     r"\bsolutions?\s+(?:engineer|architect|consultant)", r"\bsales\s+engineer",
+    r"\bsales\s+development\s+(?:executive|representative|associate)\b",
     r"\bsupport\s+engineer", r"\btechnical\s+support", r"\bcustomer\s+(?:success\s+)?engineer",
     r"\bimplementation\s+engineer", r"\bdelivery\s+(?:engineer|architect)",
     r"\bfield\s+(?:engineer|application)", r"\bpre-?sales", r"\bprofessional\s+services",
@@ -92,7 +93,8 @@ _CUSTOMER_FACING = re.compile("(?i)(?:" + "|".join([
 
 # The positive definition: titles that ARE software engineering.
 _SOFTWARE = re.compile("(?i)(?:" + "|".join([
-    r"\bsoftware\s+(?:engineer|developer|architect)", r"\bswe\b", r"\bsde\s*[123i]*\b",
+    r"\bsoftware\s+(?:engineer|developer|architect)", r"\bsoftware\s+development\s+engineer",
+    r"\bswe\b", r"\bsde\s*[123i]*\b",
     r"\b(?:back|front)[\s-]?end\b", r"\bfull[\s-]?stack\b", r"\bweb\s+(?:developer|engineer)",
     r"\bmobile\s+(?:engineer|developer)", r"\b(?:ios|android)\s+(?:engineer|developer)",
     r"\bplatform\s+engineer", r"\binfrastructure\s+engineer", r"\bdevops\b", r"\bsre\b",

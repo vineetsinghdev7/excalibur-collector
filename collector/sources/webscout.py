@@ -116,7 +116,9 @@ ATS_PATTERNS: tuple[tuple[str, str], ...] = (
     ("eightfold", r"(?<![A-Za-z0-9_.-])(?!app\.)([A-Za-z0-9_-]+)\.eightfold\.ai"),
     ("taleo", r"([A-Za-z0-9_-]+)\.taleo\.net"),
 )
-_COMPILED = tuple((n, re.compile(p, re.I)) for n, p in ATS_PATTERNS)
+# Start at a hostname boundary. Without this guard, a long embedded image/hash is
+# retried at every character by the leading hostname quantifiers (quadratic work).
+_COMPILED = tuple((n, re.compile(r"(?<![A-Za-z0-9_-])" + p, re.I)) for n, p in ATS_PATTERNS)
 
 # Hosts that are never a company's own careers site — following these wastes requests and can
 # look like scraping a third party.
