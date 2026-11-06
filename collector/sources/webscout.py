@@ -83,8 +83,8 @@ ATS_PATTERNS: tuple[tuple[str, str], ...] = (
     ("greenhouse", r"greenhouse\.io/embed/job_board(?:/js)?\?for=([A-Za-z0-9_-]+)"),
     ("greenhouse", r"(?:boards|job-boards)\.greenhouse\.io/([A-Za-z0-9_-]+)"),
     ("greenhouse", r"boards-api\.greenhouse\.io/v1/boards/([A-Za-z0-9_-]+)"),
-    ("lever", r"jobs\.(?:eu\.)?lever\.co/([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*)"),   # "willowhealth.com" is a real token
-    ("lever", r"api\.lever\.co/v0/postings/([A-Za-z0-9_-]+)"),
+    ("lever", r"jobs\.(?:eu\.)?lever\.co/([A-Za-z0-9_%-]+(?:\.[A-Za-z0-9_%-]+)*)"),  # e.g. willowhealth.com or Loop%20AI
+    ("lever", r"api\.lever\.co/v0/postings/([A-Za-z0-9_%-]+(?:\.[A-Za-z0-9_%-]+)*)"),
     ("ashby", r"jobs\.ashbyhq\.com/([A-Za-z0-9_.%-]+)"),      # %20: "The%20Browser%20Company" is one
     ("ashby", r"api\.ashbyhq\.com/posting-api/job-board/([A-Za-z0-9_.-]+)"),
     ("smartrecruiters", r"(?:careers|jobs)\.smartrecruiters\.com/([A-Za-z0-9_-]+)"),
@@ -181,19 +181,17 @@ class Polite:
 def fingerprint(text: str) -> tuple[str, str]:
     """Find an ATS token in a URL or a page's HTML. → (ats, token) or ('', '')."""
     for name, pat in _COMPILED:
-        m = pat.search(text or "")
-        if not m:
-            continue
-        if name == "workday" and m.lastindex and m.lastindex >= 3:
-            return name, f"{m.group(1)}|{m.group(2)}|{m.group(3)}"   # tenant|wdN|site
-        tok = m.group(1)
-        # Shared/infrastructure hostnames and path fragments are not company tokens. Every one of
-        # these was harvested as a "board" on a live run before the list existed.
-        if tok.lower() in ("www", "jobs", "careers", "career", "embed", "api", "static", "assets",
-                           "cdn", "app", "apply", "portal", "employer", "recruiting", "hire",
-                           "my", "secure", "web", "public", "en", "us"):
-            continue
-        return name, tok
+        for m in pat.finditer(text or ""):
+            if name == "workday" and m.lastindex and m.lastindex >= 3:
+                return name, f"{m.group(1)}|{m.group(2)}|{m.group(3)}"  # tenant|wdN|site
+            tok = m.group(1)
+            # Observed infrastructure links are not employer boards. Keep looking past them.
+            if tok.lower() in ("www", "jobs", "careers", "career", "embed", "api", "static", "assets",
+                               "__assets__", "cdn", "files", "support", "assets-cdn", "gallery-cdn",
+                               "careers-analytics", "app", "apply", "portal", "employer", "recruiting",
+                               "hire", "my", "secure", "web", "public", "en", "us"):
+                continue
+            return name, tok
     return "", ""
 
 

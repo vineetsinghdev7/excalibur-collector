@@ -95,13 +95,39 @@ def greenhouse(token: str, company: str = "") -> list[dict]:
 
 
 # ---- Lever ------------------------------------------------------------------
+_LEVER_PAGE_SIZE = 200
+_LEVER_MAX_PAGES = 50
+
+
 def lever(token: str, company: str = "") -> list[dict]:
-    data = _get_json(f"https://api.lever.co/v0/postings/{token}?mode=json")
-    if not isinstance(data, list):
-        # EU customers live on a separate API; their boards answer 404 on the US one.
-        data = _get_json(f"https://api.eu.lever.co/v0/postings/{token}?mode=json")
-    if not isinstance(data, list):
-        return []
+    # Documented skip/limit pagination keeps large boards inside the response/cache budgets.
+    # https://github.com/lever/postings-api#get-a-list-of-job-postings
+    base = f"https://api.lever.co/v0/postings/{token}"
+    data, seen = [], set()
+    for page in range(_LEVER_MAX_PAGES):
+        query = f"?mode=json&limit={_LEVER_PAGE_SIZE}&skip={page * _LEVER_PAGE_SIZE}"
+        items = _get_json(base + query)
+        if page == 0 and not isinstance(items, list):
+            # EU customers have a separate API. Keep subsequent pages on that same host.
+            base = f"https://api.eu.lever.co/v0/postings/{token}"
+            items = _get_json(base + query)
+        if not isinstance(items, list) or any(not isinstance(j, dict) for j in items):
+            return []  # A failed later page must not be reported as a successful full read.
+        added = 0
+        for j in items:
+            key = j.get("id") or j.get("hostedUrl") or j.get("applyUrl")
+            if not isinstance(key, str) or not key:
+                return []
+            if key not in seen:
+                seen.add(key)
+                data.append(j)
+                added += 1
+        if len(items) < _LEVER_PAGE_SIZE:
+            break
+        if not added:
+            return []  # Endpoint ignored the offset; don't loop over a repeated page.
+    else:
+        return []  # Bounded work; do not silently accept a truncated oversized board.
     out = []
     for j in data:
         cats = j.get("categories") or {}
