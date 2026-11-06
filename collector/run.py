@@ -20,13 +20,13 @@ def fingerprint(job):
 def board_key(board):return identifier(board['ats']+':'+board['token'])
 
 def choose(boards,state,now,limit):
-    def is_due(board):
+    def due_at(board):
         checkpoint=state['boards'].get(board_key(board),[0,0])
         # A newly shortened interval must not inherit a healthy board's old daily
         # deadline. Retain failure backoff; do not hammer unavailable publishers.
-        return checkpoint[0]<=now or (not checkpoint[1] and checkpoint[0]>now+board['interval'])
-    due=[b for b in boards if is_due(b)]
-    due.sort(key=lambda b:(not b['priority'],not b['india_proven'],state['boards'].get(board_key(b),[0])[0],board_key(b)))
+        return 0 if not checkpoint[1] and checkpoint[0]>now+board['interval'] else checkpoint[0]
+    due=[b for b in boards if due_at(b)<=now]
+    due.sort(key=lambda b:(not b['priority'],not b['india_proven'],due_at(b),board_key(b)))
     return due[:limit]
 
 def normalize(job,board,profile,now):

@@ -28,6 +28,9 @@ class CollectorTests(unittest.TestCase):
   upgraded={**BOARD,'priority':False,'interval':1800}
   state={'boards':{run.board_key(upgraded):[NOW+80000,0]},'seen':{}}
   self.assertEqual(run.choose([upgraded],state,NOW,1),[upgraded])
+  ordinary={**upgraded,'token':'ordinary'}
+  state['boards'][run.board_key(ordinary)]=[NOW-100,0]
+  self.assertEqual(run.choose([ordinary,upgraded],state,NOW,1),[upgraded])
   state['boards'][run.board_key(upgraded)]=[NOW+80000,2]
   self.assertEqual(run.choose([upgraded],state,NOW,1),[])
   state['boards'][run.board_key(upgraded)]=[NOW+1700,0]
