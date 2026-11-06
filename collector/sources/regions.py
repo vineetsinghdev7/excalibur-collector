@@ -29,8 +29,12 @@ INDIA_CITIES = {"bengaluru": "Bengaluru", "bangalore": "Bengaluru", "hyderabad":
                 "jaipur": "Jaipur", "indore": "Indore", "chandigarh": "Chandigarh",
                 "coimbatore": "Coimbatore", "mysuru": "Mysuru", "mysore": "Mysuru",
                 "bhubaneswar": "Bhubaneswar", "nagpur": "Nagpur", "vadodara": "Vadodara",
-                "visakhapatnam": "Visakhapatnam", "lucknow": "Lucknow"}
-_INDIA = r"\b(?:india|" + "|".join(INDIA_CITIES) + r")\b"
+                "visakhapatnam": "Visakhapatnam", "lucknow": "Lucknow",
+                "mohali": "Mohali", "bhilai": "Bhilai", "vellore": "Vellore",
+                "kozhikode": "Kozhikode", "calicut": "Kozhikode"}
+# State-only locations remain states, not inferred cities. Punjab alone is ambiguous.
+_INDIA_STATES = ("kerala",)
+_INDIA = r"\b(?:india|" + "|".join((*INDIA_CITIES, *_INDIA_STATES)) + r")\b"
 _INDIA_RX = re.compile(_INDIA, re.I)
 _INDIA_CITY_RX = re.compile(r"\b(" + "|".join(INDIA_CITIES) + r")\b", re.I)
 

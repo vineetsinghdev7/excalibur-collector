@@ -74,6 +74,10 @@ _NOT_SOFTWARE = re.compile("(?i)\\b(?:" + "|".join([
     r"(?:programmer|programming)[\s/-]+(?:cnc|cam|cmm|plc|mastercam)",
 ]) + r")\b")
 
+# A publisher may spell the software tool as two words. Normalize only the
+# classification input; the original title and physical power exclusions stay intact.
+_SOFTWARE_TOOL_SPELLING = re.compile(r"\bpower\s+shell\b", re.I)
+
 # Customer-facing "engineers" — the job is the customer, not the codebase.
 _CUSTOMER_FACING = re.compile("(?i)(?:" + "|".join([
     r"\bsolutions?\s+(?:engineer|architect|consultant)", r"\bsales\s+engineer",
@@ -94,6 +98,7 @@ _CUSTOMER_FACING = re.compile("(?i)(?:" + "|".join([
 # The positive definition: titles that ARE software engineering.
 _SOFTWARE = re.compile("(?i)(?:" + "|".join([
     r"\bsoftware\s+(?:engineer|developer|architect)", r"\bsoftware\s+development\s+engineer",
+    r"\bsoftware\s+design\s+engineer\b",
     r"\bswe\b", r"\bsde\s*[123i]*\b",
     r"\b(?:back|front)[\s-]?end\b", r"\bfull[\s-]?stack\b", r"\bweb\s+(?:developer|engineer)",
     r"\bmobile\s+(?:engineer|developer)", r"\b(?:ios|android)\s+(?:engineer|developer)",
@@ -247,7 +252,8 @@ def is_software_title(title: str) -> bool:
     t = (title or "").lower()
     if not t:
         return False
-    if _NOT_SOFTWARE.search(t) or _CUSTOMER_FACING.search(t) or _MGMT.search(t):
+    if (_NOT_SOFTWARE.search(_SOFTWARE_TOOL_SPELLING.sub("powershell", t))
+            or _CUSTOMER_FACING.search(t) or _MGMT.search(t)):
         return False
     if _NON_ENG.search(t) and not _ENG_TITLE.search(t):
         return False
@@ -315,7 +321,7 @@ def score(job: dict, profile: dict | None = None) -> tuple[int, list[str]]:
     # and "engineers" whose job is the customer (Solutions/Sales/Support). Both take
     # precedence over the description — a propulsion engineer's posting still says "design
     # and build".
-    if _NOT_SOFTWARE.search(title):
+    if _NOT_SOFTWARE.search(_SOFTWARE_TOOL_SPELLING.sub("powershell", title)):
         return 0, ["not software (hardware/physical engineering)"]
     if _CUSTOMER_FACING.search(title):
         return 0, ["customer-facing, not software engineering"]

@@ -78,18 +78,30 @@ def _text(v) -> str:
 
 
 def _location(p: dict) -> str:
+    def country(value):
+        # Only normalize country fields: "IN" elsewhere can mean Indiana.
+        if isinstance(value, dict):
+            return country(value.get("name") or value.get("value") or "")
+        if isinstance(value, list):
+            return ", ".join(filter(None, (country(item) for item in value)))
+        text = _text(value)
+        return "India" if text == "IN" else text
+
     places = []
     locs = p.get("jobLocation") or []
     for loc in (locs if isinstance(locs, list) else [locs]):
         a = (loc or {}).get("address") if isinstance(loc, dict) else None
         if isinstance(a, dict):
-            parts = [_text(a.get(k)) for k in ("addressLocality", "addressRegion", "addressCountry")]
+            parts = [_text(a.get(k)) for k in ("addressLocality", "addressRegion")]
+            parts.append(country(a.get("addressCountry")))
             places.append(", ".join(x for x in parts if x))
         elif isinstance(a, str):
             places.append(a)
     if str(p.get("jobLocationType") or "").upper() == "TELECOMMUTE":
         req = p.get("applicantLocationRequirements") or []
-        where = ", ".join(_text(r) for r in (req if isinstance(req, list) else [req]) if _text(r))
+        values = (country(r) if isinstance(r, dict) and r.get("@type") == "Country" else _text(r)
+                  for r in (req if isinstance(req, list) else [req]))
+        where = ", ".join(filter(None, values))
         places.insert(0, f"Remote ({where})" if where else "Remote")
     return "; ".join(x for x in places if x)[:200]
 
@@ -289,6 +301,10 @@ def run(recipe: dict, company: str = "", token: str = "") -> list[dict]:
     company = company or recipe.get("company") or ""
     token = token or recipe.get("token") or ""
     rx = re.compile(recipe["link_regex"]) if recipe.get("link_regex") else None
+    if m == "sections":
+        from collector.sources import site_sections
+        code, final, body, _ = _get(recipe["list_url"], polite)
+        return site_sections.extract(body, final, company, token, recipe) if code == 200 else []
     if m in ("jsonld", "links", "render"):
         urls, jobs, texts = [], [], {}
         for page in [recipe["list_url"], *(recipe.get("more_list_urls") or [])][:6]:
