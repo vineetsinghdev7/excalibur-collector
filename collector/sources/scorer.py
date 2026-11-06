@@ -80,6 +80,7 @@ _SOFTWARE_TOOL_SPELLING = re.compile(r"\bpower\s+shell\b", re.I)
 
 # Customer-facing "engineers" — the job is the customer, not the codebase.
 _CUSTOMER_FACING = re.compile("(?i)(?:" + "|".join([
+    r"\bbusiness\s+developer\b",
     r"\bsolutions?\s+(?:engineer|architect|consultant)", r"\bsales\s+engineer",
     r"\bsales\s+development\s+(?:executive|representative|associate)\b",
     r"\bsupport\s+engineer", r"\btechnical\s+support", r"\bcustomer\s+(?:success\s+)?engineer",
